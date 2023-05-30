@@ -1,5 +1,6 @@
 {
     "workspaces": [
+        "apps/todolist",
         "packages/web5-agent",
         "packages/crypto",
         "packages/dids",
