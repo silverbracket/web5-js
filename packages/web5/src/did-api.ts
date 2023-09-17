@@ -49,6 +49,7 @@ export class DidApi {
   // TODO: discuss whether we want this approach or would rather just go with options being unknown. this approach
   //       leads to a better devex because intellisense will work based on what was provided for method
   create<M extends keyof CreateMethodOptions>(method: M, options?: CreateOptions<M>): Promise<DidState> {
+    debugger;
     const didMethodCreator = this.methodCreatorMap.get(method);
     if (!didMethodCreator) {
       throw new Error(`no creator available for ${method}`);

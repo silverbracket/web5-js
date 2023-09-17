@@ -31,6 +31,8 @@ type Web5Options = {
   connectedDid: string;
 };
 
+console.log("Web5 from import");
+
 export class Web5 {
   appStorage: AppStorage;
   dwn: DwnApi;
@@ -59,7 +61,9 @@ export class Web5 {
     const appStorage = new AppStorage();
     const cachedAppDidState = await appStorage.get(Web5.APP_DID_KEY);
     let appDidState: DidState;
-
+    debugger;
+    const data = await this.did.create('key');
+    console.log(data);
     if (cachedAppDidState) {
       appDidState = JSON.parse(cachedAppDidState);
     } else {
