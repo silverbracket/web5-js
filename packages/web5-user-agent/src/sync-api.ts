@@ -162,6 +162,13 @@ export class SyncApi implements SyncManager {
       }
 
       const dwnMessage = await this.#getDwnMessage(did, messageCid);
+      if (!dwnMessage) {
+        delOps.push({ type: 'del', key: key });
+        await this.setWatermark(did, dwnUrl, 'push', watermark);
+        await this.#addMessage(did, messageCid);
+
+        continue;
+      }
 
       try {
         const reply = await this.#dwnRpcClient.sendDwnRequest({
@@ -284,7 +291,16 @@ export class SyncApi implements SyncManager {
       }
 
       for (let entry of reply.messages) {
-        // TODO: check entry.error
+        if (entry.error || !entry.message) {
+          console.warn(`message ${messageCid} not found. entry: ${JSON.stringify(entry, null, 2)} ignoring..`);
+
+          await this.setWatermark(did, dwnUrl, 'pull', watermark);
+          await this.#addMessage(did, messageCid);
+          delOps.push({ type: 'del', key });
+
+          continue;
+        }
+
         const messageType = this.#getDwnMessageType(entry.message);
         let dataStream;
 
@@ -307,9 +323,18 @@ export class SyncApi implements SyncManager {
               message   : recordsRead
             }) as RecordsReadReply;
 
-            if (reply.status.code >= 400) {
-              // TODO: handle reply
+            if (recordsReadReply.status.code >= 400) {
               const pruneReply = await this.#dwn.synchronizePrunedInitialRecordsWrite(did, message);
+
+              if (pruneReply.status.code === 202 || pruneReply.status.code === 409) {
+                await this.setWatermark(did, dwnUrl, 'pull', watermark);
+                await this.#addMessage(did, messageCid);
+                delOps.push({ type: 'del', key });
+
+                continue;
+              } else {
+                throw new Error(`Failed to sync tombstone. message cid: ${messageCid}`);
+              }
             } else {
               dataStream = webReadableToIsomorphicNodeReadable(recordsReadReply.record.data as any);
             }
@@ -339,13 +364,16 @@ export class SyncApi implements SyncManager {
     const result: MessagesGetReply = await this.#dwn.processMessage(author, messagesGet.toJSON());
     const [ messageEntry ] = result.messages;
 
+    // absence of a messageEntry or message within messageEntry can happen because updating a Record actually creates another
+    // RecordsWrite with the same recordId. only the first and most recent RecordsWrite messages are kept for a given
+    // recordId. any in between are outright nuked from everywhere.
     if (!messageEntry) {
-      throw new Error('TODO: figure out error message');
+      return undefined;
     }
 
     let { message } = messageEntry;
     if (!message) {
-      throw new Error('TODO: message not found');
+      return undefined;
     }
 
     let dwnMessage: DwnMessage = { message };
@@ -367,12 +395,16 @@ export class SyncApi implements SyncManager {
 
         const reply = await this.#dwn.processMessage(author, recordsRead.toJSON()) as RecordsReadReply;
 
-        if (reply.status.code >= 400) {
-          const { status: { code, detail } } = reply;
-          throw new Error(`(${code}) Failed to read data associated with record ${message['recordId']}. ${detail}}`);
-        } else {
+        // if the data no longer exists (aka 404), it's likely that a `RecordsDelete` took place.
+        // `RecordsDelete` keeps a `RecordsWrite` and just deletes the associated data, effectively acting as a "tombstone".
+        // We still need to _push_ this tombstone so that the `RecordsDelete` can be processed successfully.
+        // if 200, return the data. if 4xx ignore for the reason explained, if >= 5xx throw error
+        if (reply.status.code === 200) {
           const dataBytes = await DataStream.toBytes(reply.record.data);
           dwnMessage.data = new Blob([dataBytes]);
+        } else if (reply.status.code >= 500) {
+          const { status: { code, detail } } = reply;
+          throw new Error(`(${code}) Failed to read data associated with record ${message['recordId']}. ${detail}}`);
         }
       }
     }

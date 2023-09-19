@@ -18,6 +18,15 @@ import { TestAgent, TestProfileOptions } from './test-utils/test-user-agent.js';
 
 chai.use(chaiAsPromised);
 
+// NOTE: @noble/secp256k1 requires globalThis.crypto polyfill for node.js <=18: https://github.com/paulmillr/noble-secp256k1/blob/main/README.md#usage
+// Remove when we move off of node.js v18 to v20, earliest possible time would be Oct 2023: https://github.com/nodejs/release#release-schedule
+// NOTE: @noble/secp256k1 requires globalThis.crypto polyfill for node.js <=18: https://github.com/paulmillr/noble-secp256k1/blob/main/README.md#usage
+// Remove when we move off of node.js v18 to v20, earliest possible time would be Oct 2023: https://github.com/nodejs/release#release-schedule
+import { webcrypto } from 'node:crypto';
+// @ts-ignore
+if (!globalThis.crypto) globalThis.crypto = webcrypto;
+
+
 // TODO: Come up with a better way of resolving the TS errors.
 type RecordsWriteTest = RecordsWrite & RecordsWriteMessage;
 
@@ -99,11 +108,13 @@ describe('Record', () => {
       keyEncryptionInputs  : [
         {
           derivationScheme : KeyDerivationScheme.Protocols,
-          publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk
+          publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk,
+          publicKeyId      : recordEncryptionKeyId
         },
         {
           derivationScheme : KeyDerivationScheme.Schemas,
-          publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk
+          publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk,
+          publicKeyId      : recordEncryptionKeyId
         },
       ]
     };
@@ -593,7 +604,7 @@ describe('Record', () => {
       expect(aliceRemoteQueryResult.records!.length).to.equal(1);
       const [ aliceRemoteEmailRecord ] = aliceAgentQueryResult!.records!;
       expect(await aliceRemoteEmailRecord.data.text()).to.equal(dataString);
-    }).timeout(10_000);
+    });
 
     it(`writes records to remote DWNs for someone else's DID`, async () => {
       const dataString = 'Hello, world!';
@@ -658,7 +669,7 @@ describe('Record', () => {
       expect(bobQueryResult.records!.length).to.equal(1);
       const [ bobRemoteEmailRecord ] = bobQueryResult!.records!;
       expect(await bobRemoteEmailRecord.data.text()).to.equal(dataString);
-    }).timeout(10_000);
+    });
 
     describe('with `store: false`', () => {
       it('writes records to your own remote DWN but not your agent DWN', async () => {
@@ -712,7 +723,7 @@ describe('Record', () => {
         expect(aliceRemoteQueryResult.records!.length).to.equal(1);
         const [ aliceRemoteEmailRecord ] = aliceRemoteQueryResult!.records!;
         expect(await aliceRemoteEmailRecord.data.text()).to.equal(dataString);
-      }).timeout(10_000);
+      });
 
       it(`writes records to someone else's remote DWN but not your agent DWN`, async () => {
         // Install a protocol on Alice's agent connected DWN.
@@ -800,7 +811,7 @@ describe('Record', () => {
         expect(bobQueryResult.records!.length).to.equal(1);
         const [ bobRemoteEmailRecord ] = bobQueryResult!.records!;
         expect(await bobRemoteEmailRecord.data.text()).to.equal(dataString);
-      }).timeout(10_000);
+      });
 
       it('has no effect if `store: true`', async () => {
         // Alice writes a message to her agent DWN with `store: true`.
@@ -908,11 +919,13 @@ describe('Record', () => {
         keyEncryptionInputs  : [
           {
             derivationScheme : KeyDerivationScheme.Protocols,
-            publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk
+            publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk,
+            publicKeyId      : recordEncryptionKeyId
           },
           {
             derivationScheme : KeyDerivationScheme.Schemas,
-            publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk
+            publicKey        : encryptionPublicKeyJwk as DwnPublicKeyJwk,
+            publicKeyId      : recordEncryptionKeyId
           },
         ]
       };

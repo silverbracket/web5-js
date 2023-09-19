@@ -1,17 +1,16 @@
 import type { Readable } from 'readable-stream';
 
 import {
-  MessageReply,
+  EventsGetMessage,
+  UnionMessageReply,
+  MessagesGetMessage,
   RecordsQueryMessage,
+  RecordsWriteMessage,
+  RecordsDeleteMessage,
   ProtocolsQueryMessage,
   ProtocolsConfigureMessage,
-  EventsGetMessage,
-  MessagesGetMessage,
-  RecordsWriteMessage,
-  RecordsDeleteMessage
 } from '@tbd54566975/dwn-sdk-js';
 
-import type { JsonRpcResponse } from './json-rpc.js';
 export interface Web5Agent {
   processDwnRequest(request: ProcessDwnRequest): Promise<DwnResponse>
   sendDwnRequest(request: SendDwnRequest): Promise<DwnResponse>;
@@ -52,7 +51,7 @@ export type SendDwnRequest = DwnRequest & (ProcessDwnRequest | { messageCid: str
 export type DwnResponse = {
   message?: unknown;
   messageCid?: string;
-  reply: MessageReply;
+  reply: UnionMessageReply;
 };
 
 
@@ -98,4 +97,4 @@ export type DwnRpcRequest = {
 /**
  * TODO: add jsdoc
  */
-export type DwnRpcResponse = MessageReply;
+export type DwnRpcResponse = UnionMessageReply;

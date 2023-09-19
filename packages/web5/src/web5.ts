@@ -2,29 +2,45 @@ import type { Web5Agent } from '@tbd54566975/web5-agent';
 import type { SyncManager } from '@tbd54566975/web5-user-agent';
 import type { DidState, DidMethodApi, DidResolverCache, DwnServiceEndpoint } from '@tbd54566975/dids';
 
+import ms from 'ms';
+
 // import  { Web5ProxyAgent } from '@tbd54566975/web5-proxy-agent';
 import { Dwn } from '@tbd54566975/dwn-sdk-js';
 import { Web5UserAgent, ProfileApi, SyncApi } from '@tbd54566975/web5-user-agent';
 import { DidIonApi, DidKeyApi, utils as didUtils } from '@tbd54566975/dids';
 
+import { VcApi } from './vc-api.js';
 import { DwnApi } from './dwn-api.js';
 import { DidApi } from './did-api.js';
 import { AppStorage } from './app-storage.js';
 import { getRandomInt } from './utils.js';
 import { DidResolutionCache } from './did-resolution-cache.js';
 
+/**
+ * overrides to defaults configured for technical preview phase
+ */
 export type TechPreviewOptions = {
+  /** overrides default dwnEndpoints provided for technical preview. see `Web5.#enqueueNextSync` */
   dwnEndpoints?: string[];
 }
 
-// TODO: discuss what other options we want
+/**
+ * optional overrides that can be provided when calling {@link Web5.connect}
+ */
 export type Web5ConnectOptions = {
+  /** a custom {@link Web5Agent}. Defaults to creating an embedded {@link Web5UserAgent} if one isnt provided */
   web5Agent?: Web5Agent;
+  /** additional {@link DidMethodApi}s that can be used to create and resolve DID methods. defaults to did:key and did:ion */
   didMethodApis?: DidMethodApi[];
+  /** custom cache used to store DidResolutionResults. defaults to a {@link DidResolutionCache} */
   didResolutionCache?: DidResolverCache;
+  /** overrides to defaults configured for technical preview phase. See {@link TechPreviewOptions} */
   techPreview?: TechPreviewOptions;
 }
 
+/**
+ * @see {@link Web5ConnectOptions}
+ */
 type Web5Options = {
   web5Agent: Web5Agent;
   appStorage?: AppStorage;
@@ -36,26 +52,37 @@ console.log("Web5 from import");
 export class Web5 {
   appStorage: AppStorage;
   dwn: DwnApi;
+  vc: VcApi;
   #connectedDid: string;
 
+  /**
+   * Statically available DID functionality. can be used to create and resolve DIDs without calling {@link connect}.
+   * By default, can create and resolve `did:key` and `did:ion`. DID resolution results are not cached unless `connect`
+   * is called
+   */
   static did = new DidApi({
-    didMethodApis : [new DidIonApi(), new DidKeyApi()],
-    cache         : new DidResolutionCache()
+    didMethodApis: [new DidIonApi(), new DidKeyApi()]
   });
 
-  get did() {
-    return Web5.did;
-  }
+  /**
+   * DID functionality (e.g. creating and resolving DIDs)
+   */
+  get did() { return Web5.did; }
 
   private static APP_DID_KEY = 'WEB5_APP_DID';
-
 
   private constructor(options: Web5Options) {
     this.#connectedDid = options.connectedDid;
     this.dwn = new DwnApi(options.web5Agent, this.#connectedDid);
+    this.vc = new VcApi(options.web5Agent, this.#connectedDid);
     this.appStorage ||= new AppStorage();
   }
 
+  /**
+   * Connects to a {@link Web5Agent}. defaults to creating an embedded {@link Web5UserAgent} if one isn't provided
+   * @param options - optional overrides
+   * @returns
+   */
   static async connect(options: Web5ConnectOptions = {}) {
     // load app's did
     const appStorage = new AppStorage();
@@ -78,10 +105,18 @@ export class Web5 {
     const profileApi = new ProfileApi();
     let [ profile ] = await profileApi.listProfiles();
 
+    options.didMethodApis ??= [];
+
+    // override default cache used by `Web5.did`
+    Web5.did = new DidApi({
+      didMethodApis : [new DidIonApi(), new DidKeyApi(), ...options.didMethodApis],
+      cache         : options.didResolutionCache || new DidResolutionCache()
+    });
+
     const dwn = await Dwn.create();
     const syncManager = new SyncApi({
       profileManager : profileApi,
-      didResolver    : Web5.did.resolver,
+      didResolver    : Web5.did.resolver, // share the same resolver to share the same underlying cache
       dwn            : dwn
     });
 
@@ -102,7 +137,7 @@ export class Web5 {
 
     const agent = await Web5UserAgent.create({
       profileManager : profileApi,
-      didResolver    : Web5.did.resolver,
+      didResolver    : Web5.did.resolver, // share the same resolver to share the same underlying cache
       syncManager    : syncManager,
       dwn            : dwn,
     });
@@ -110,7 +145,7 @@ export class Web5 {
     const connectedDid = profile.did.id;
     const web5 = new Web5({ appStorage: appStorage, web5Agent: agent, connectedDid });
 
-    Web5.#enqueueNextSync(syncManager, 1_000);
+    Web5.#enqueueNextSync(syncManager, ms('2m'));
 
     return { web5, did: connectedDid };
   }

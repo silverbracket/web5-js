@@ -46,8 +46,13 @@ export class DidApi {
       this.methodCreatorMap.set(methodApi.methodName, methodApi);
     }
   }
-  // TODO: discuss whether we want this approach or would rather just go with options being unknown. this approach
-  //       leads to a better devex because intellisense will work based on what was provided for method
+
+  /**
+   * Creates a DID of the method provided
+   * @param method - the method of DID to create
+   * @param options - method-specific options
+   * @returns the created DID
+   */
   create<M extends keyof CreateMethodOptions>(method: M, options?: CreateOptions<M>): Promise<DidState> {
     debugger;
     const didMethodCreator = this.methodCreatorMap.get(method);
@@ -58,6 +63,12 @@ export class DidApi {
     return didMethodCreator.create(options);
   }
 
+  /**
+   * Resolves the provided DID
+   * @param did - the did to resolve
+   * @see {@link https://www.w3.org/TR/did-core/#did-resolution | DID Resolution}
+   * @returns DID Resolution Result
+   */
   resolve(did: string): Promise<DidResolutionResult> {
     return this.didResolver.resolve(did);
   }
