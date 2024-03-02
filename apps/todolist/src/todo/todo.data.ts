@@ -1,30 +1,30 @@
-import { Web5 } from "@tbd54566975/web5";
-import { Level } from "level";
-import { Todo } from "./todo.type";
+import { Web5 } from '@tbd54566975/web5';
+import { Level } from 'level';
+import { Todo } from './todo.type';
 
 const todoDWNRegistry = {
-  schema: "http://todo-schema-registry.org/todo",
-  dataFormat: "application/json",
+  schema     : 'http://todo-schema-registry.org/todo',
+  dataFormat : 'application/json',
 };
 
 const { schema, dataFormat } = todoDWNRegistry;
 
-const store = new Level("data/app/storage");
+const store = new Level('data/app/storage');
 
-console.log(await store.get("WEB5_APP_DID"));
+console.log(await store.get('WEB5_APP_DID'));
 
 const { web5, did: aliceDid } = await Web5.connect({
-//   techPreview: {
-//     dwnEndpoints: ["https://dwn.your-domain.org/"],
-//   },
+  //   techPreview: {
+  //     dwnEndpoints: ["https://dwn.your-domain.org/"],
+  //   },
 });
 
 // console.log(aliceDid);
 
 export const createTodo = async () => {
   const { record } = await web5.dwn.records.create({
-    data: {},
-    message: {
+    data    : {},
+    message : {
       schema,
       dataFormat,
     },
@@ -46,8 +46,8 @@ export const getAllTodos = async (): Promise<Todo[]> => {
   }
   return [
     {
-      id: "1",
-      description: "deploy code to cf",
+      id          : '1',
+      description : 'deploy code to cf',
     },
   ];
 };
