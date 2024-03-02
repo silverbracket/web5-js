@@ -1,14 +1,15 @@
 # Web5 JS SDK
 
-[![NPM](https://img.shields.io/npm/v/@tbd54566975/web5.svg?style=flat-square&logo=npm&logoColor=FFFFFF&color=FFEC19&santize=true)](https://www.npmjs.com/package/@tbd54566975/web5)
+[![NPM](https://img.shields.io/npm/v/@web5/api.svg?style=flat-square&logo=npm&logoColor=FFFFFF&color=FFEC19&santize=true)](https://www.npmjs.com/package/@web5/api)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/TBD54566975/web5-js/tests-ci.yml?branch=main&logo=github&label=ci&logoColor=FFFFFF&style=flat-square)](https://github.com/TBD54566975/web5-js/actions/workflows/tests-ci.yml)
-[![Coverage](https://img.shields.io/codecov/c/gh/frankhinek/test-web5-js/main?logo=codecov&logoColor=FFFFFF&style=flat-square&token=YI87CKF1LI)](https://codecov.io/github/TBD54566975/web5-js)
-[![License](https://img.shields.io/npm/l/@tbd54566975/web5.svg?style=flat-square&color=24f2ff&logo=apache&logoColor=FFFFFF&santize=true)](https://github.com/TBD54566975/web5-js/blob/main/LICENSE)
+[![Coverage](https://img.shields.io/codecov/c/gh/TBD54566975/web5-js/main?logo=codecov&logoColor=FFFFFF&style=flat-square&token=YI87CKF1LI)](https://codecov.io/github/TBD54566975/web5-js)
+[![License](https://img.shields.io/npm/l/@web5/api.svg?style=flat-square&color=24f2ff&logo=apache&logoColor=FFFFFF&santize=true)](https://github.com/TBD54566975/web5-js/blob/main/LICENSE)
 [![Chat](https://img.shields.io/badge/chat-on%20discord-7289da.svg?style=flat-square&color=9a1aff&logo=discord&logoColor=FFFFFF&sanitize=true)](https://discord.com/channels/937858703112155166/969272658501976117)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/TBD54566975/web5-js/badge)](https://securityscorecards.dev/viewer/?uri=github.com/TBD54566975/web5-js)
 
 Making developing with Web5 components at least 5 times easier to work with.
 
-> ⚠️ WEB5 JS SDK IS CURRENTLY IN TECH PREVIEW ⚠️
+> :warning: WEB5 JS SDK IS CURRENTLY IN TECH PREVIEW :warning:
 
 The SDK is currently still under active development, but having entered the Tech Preview phase there is now a drive to avoid unnecessary changes unless backwards compatibility is provided. Additional functionality will be added in the lead up to 1.0 final, and modifications will be made to address issues and community feedback.
 
@@ -41,22 +42,45 @@ The SDK sets out to gather the most oft used functionality from all three of the
 pillar technologies to provide a simple library that is as close to effortless as
 possible.
 
+## Running online environment
+
+Interested in contributing instantly? You can make your updates directly without cloning in the running CodeSandbox environment.
+
+[![Button to click and edit code in CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/github/TBD54566975/web5-js/main)
+
+
+## Prerequisites
+
+### Cloning
+This repository uses git submodules. To clone this repo with submodules
+```sh
+git clone --recurse-submodules git@github.com:TBD54566975/web5-js.git
+```
+Or to add submodules after cloning
+```sh
+git submodule update --init
+```
+We recommend this config which will only checkout the files relevant to web5-js
+```sh
+git -C web5-spec sparse-checkout set test-vectors
+```
+
 ## Installation
 
 _NPM_
 
 ```yaml
-npm install @tbd54566975/web5
+npm install @web5/api
 ```
 
 _CDNs_
 
 ```yaml
-https://unpkg.com/@tbd54566975/web5@0.7.11/dist/browser.js
+https://unpkg.com/@web5/api@0.8.4/dist/browser.js
 ```
 
 ```yaml
-https://cdn.jsdelivr.net/npm/@tbd54566975/web5@0.7.11/dist/browser.mjs
+https://cdn.jsdelivr.net/npm/@web5/api@0.8.4/dist/browser.mjs
 ```
 
 ## Usage
@@ -64,7 +88,7 @@ https://cdn.jsdelivr.net/npm/@tbd54566975/web5@0.7.11/dist/browser.mjs
 ### Importing the SDK
 
 ```javascript
-import { Web5 } from "@tbd54566975/web5";
+import { Web5 } from "@web5/api";
 ```
 
 or
@@ -121,6 +145,14 @@ const { web5, did: myDid } = await Web5.connect();
 
 An object which may specify any of the following properties:
 
+- **`agent`** - _`Web5Agent instance`_ _(optional)_: an instance of a `Web5Agent` implementation. Defaults to creating a local `Web5UserAgent` if not provided.
+
+- **`appData`** - _`AppDataStore instance`_ _(optional)_: an instance of an `AppDataStore` implementation. Defaults to a LevelDB-backed store with an insecure, static unlock passphrase if not provided. To allow the end user to enter a secure passphrase of their choosing, provide an initialized `AppDataVault`.
+
+- **`connectedDid`** - _`string`_ _(optional)_: an existing DID to connect to.
+
+- **`sync`** - _`string`_ _(optional)_: enable or disable synchronization of DWN records between local and remote DWNs. Sync defaults to running every 2 minutes and can be set to any value accepted by [`ms`](https://www.npmjs.com/package/ms). To disable sync set to `'off'`.
+
 - **`techPreview`** - _`object`_ _(optional)_: an object that specifies configuration parameters that are relevant during the Tech Preview period of Web5 JS and may be deprecated in the future with advance notice.
 
   - **`dwnEndpoints`** - _`array`_ _(optional)_: a list of DWeb Node endpoints to define in the DID created and returned by `Web5.connect()`. If this property is omitted, during the Tech Preview two nodes will be included by default (e.g., `['https://dwn.tbddev.org/dwn0', 'https://dwn.tbddev.org/dwn3']`).
@@ -155,12 +187,17 @@ Each `Record` instance has the following instance properties: `id`, `attestation
 Each `Record` instance has the following instance methods:
 
 - **`data`** - _`object`_: an object with the following convenience methods that read out the data of the record entry in the following formats:
-  - **`text`** - _`function`_: produces a textual representation of the data.
-  - **`json`** - _`function`_: if the value is JSON data, this method will return a parsed JSON object.
-  - **`stream`** - _`function`_: returns the raw stream of bytes for the data.
+  - **`blob`** - _`function`_: returns the data as a [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob).
+  - **`bytes`** - _`function`_: returns the data as a raw byte array in `Uint8Array` format.
+  - **`json`** - _`function`_: returns a parsed JSON object.
+  - **`stream`** - _`function`_: returns the data as a raw stream of bytes.
+  - **`text`** - _`function`_: returns the data as a string.
 - **`send`** - _`function`_: sends the record the instance represents to the DWeb Node endpoints of a provided DID.
 - **`update`** - _`function`_: takes in a new request object matching the expected method signature of a `write` and overwrites the record. This is a convenience method that allows you to easily overwrite records with less verbosity.
-- **`delete`** - _`function`_: generates a `delete` entry tombstone for the record. This is a convenience method that allows you to easily delete records with less verbosity.
+- **`store`** - _`function`_: stores the record in the local DWN instance, offering the following options:
+    - `import`: imports the record as with an owner-signed override (still subject to Protocol rules, when a record is Protocol-based)
+- **`import`** - _`function`_: signs a record with an owner override to import the record into the local DWN instance:
+    - `store` - _`boolean`_: when false is passed, the record will only be signed with an owner override, not stored in the local DWN instance. Defaults to `true`.
 
 ### **`web5.dwn.records.query(request)`**
 
@@ -201,9 +238,28 @@ The query `request` contains the following properties:
 - **`from`** - _`DID string`_ (_optional_): the decentralized identifier of the DWeb Node the query will fetch results from.
 - **`message`** - _`object`_: the properties of the DWeb Node Message Descriptor that will be used to construct a valid record query:
   - **`filter`** - _`object`_: properties against which results of the query will be filtered:
+    - **`recordId`** - _`string`_ (_optional_): the record ID string that identifies the record data you are fetching.
     - **`protocol`** - _`URI string`_ (_optional_): the URI of the protocol bucket in which to query.
+    - **`protocolPath`** - _`string`_ (_optional_): the path to the record in the protocol configuration.
+    - **`contextId`** _`string`_ (_optional_): the `recordId` of a root record of a protocol.
+    - **`parentId`** _`string`_ (_optional_): the `recordId` of a the parent of a protocol record.
+    - **`recipient`** - _`string`_ (_optional_): the DID in the `recipient` field of the record.
     - **`schema`** - _`URI string`_ (_optional_): the URI of the schema bucket in which to query.
     - **`dataFormat`** - _`Media Type string`_ (_optional_): the IANA string corresponding with the format of the data to filter for. See IANA's Media Type list here: https://www.iana.org/assignments/media-types/media-types.xhtml
+  - **`dateSort`** - _`DateSort`_ (_optional_): the `DateSort` value of the date field and direction to sort records by. Defaults to `CreatedAscending`.
+  - **`pagination`** - _`object`_ (_optional_): the properties used to paginate results.
+    - **`limit`** - _`number`_ (_optional_): the number of records that should be returned with this query. `undefined` returns all records.
+    - **`cursor`** - _`messageCid string`_ (_optional_): the `messageCid` of the records toc continue paginating from. This value is returned as a `cursor` in the response object of a `query` if there are more results beyond the `limit`.
+
+#### **Response**
+
+The query `response` contains the following properties:
+
+- **`status`** - _`object`_: the status of the `request`:
+  - **`code`** - _`number`_: the `Response Status` code, following the response code patterns for `HTTP Response Status Codes`.
+  - **`detail`** _`string`_: a detailed message describing the response.
+- **`records`** - _`Records array`_ (_optional_): the array of `Records` returned if the request was successful.
+- **`cursor`** - _`messageCid string`_ (_optional_): the `messageCid` of the last message returned in the results if there are exist additional records beyond the specified `limit` in the `query`.
 
 ### **`web5.dwn.records.create(request)`**
 
@@ -251,13 +307,15 @@ The `create()` method is an alias for `write()` and both can take the same reque
 
 ### **`web5.dwn.records.read(request)`**
 
-Method for reading a record stored in the user's local DWeb Node, remote DWeb Nodes, or another party's DWeb Nodes (if permitted).
+Method for reading a record stored in the user's local DWeb Node, remote DWeb Nodes, or another party's DWeb Nodes (if permitted). The request takes a filter; if there is exactly one record matching the filter, the record and its data are returned. The most common filter is by `recordId`, but it is also useful to filter by `protocol`, `contextId`, and `protocolPath`.
 
 ```javascript
 // Reads the indicated record from the user's DWeb Nodes
 const { record } = await web5.dwn.records.read({
   message: {
-    recordId: "bfw35evr6e54c4cqa4c589h4cq3v7w4nc534c9w7h5",
+    filter: {
+      recordId: "bfw35evr6e54c4cqa4c589h4cq3v7w4nc534c9w7h5",
+    },
   },
 });
 
@@ -267,7 +325,9 @@ console.log(await record.data.text()); // assuming the record is a text payload,
 const { record } = await web5.dwn.records.read({
   from: "did:example:bob",
   message: {
-    recordId: "bfw35evr6e54c4cqa4c589h4cq3v7w4nc534c9w7h5",
+    filter: {
+      recordId: "bfw35evr6e54c4cqa4c589h4cq3v7w4nc534c9w7h5",
+    },
   },
 });
 
@@ -280,7 +340,15 @@ The `read` request object is composed as follows:
 
 - **`from`** - _`DID string`_ (_optional_): The DID of the DWeb Node the read request will fetch the indicated record from.
 - **`message`** - _`object`_: The properties of the DWeb Node Message Descriptor that will be used to construct a valid DWeb Node message.
-  - **`recordId`** - _`string`_: the required record ID string that identifies the record data you are fetching.
+  - **`filter`** - _`object`_: properties against which results of the query will be filtered:
+    - **`recordId`** - _`string`_ (_optional_): the record ID string that identifies the record data you are fetching.
+    - **`protocol`** - _`URI string`_ (_optional_): the URI of the protocol bucket in which to query.
+    - **`protocolPath`** - _`string`_ (_optional_): the path to the record in the protocol configuration.
+    - **`contextId`** _`string`_ (_optional_): the `recordId` of a root record of a protocol.
+    - **`parentId`** _`string`_ (_optional_): the `recordId` of a the parent of a protocol record.
+    - **`recipient`** - _`string`_ (_optional_): the DID in the `recipient` field of the record.
+    - **`schema`** - _`URI string`_ (_optional_): the URI of the schema bucket in which to query.
+    - **`dataFormat`** - _`Media Type string`_ (_optional_): the IANA string corresponding with the format of the data to filter for. See IANA's Media Type list here: https://www.iana.org/assignments/media-types/media-types.xhtml
 
 ### **`web5.dwn.records.delete(request)`**
 
@@ -320,6 +388,7 @@ const { protocol } = await web5.dwn.protocols.configure({
   message: {
     definition: {
       protocol: "https://photos.org/protocol",
+      published: true,
       types: {
         album: {
           schema: "https://photos.org/protocol/album",
@@ -427,6 +496,24 @@ The `create` method under the `did` object enables generation of DIDs for a supp
 
 ```javascript
 const myDid = await Web5.did.create("ion");
+```
+
+## Working with the `web5-spec` submodule
+
+### Pulling
+You may need to update the `web5-spec` submodule after pulling.
+```sh
+git pull
+git submodule update
+```
+
+### Pushing
+If you have made changes to the `web5-spec` submodule, you should push your changes to the `web5-spec` remote as well as pushing changes to `web5-js`.
+```sh
+cd web5-spec
+git push
+cd ..
+git push
 ```
 
 ## Project Resources

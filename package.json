@@ -1,25 +1,35 @@
 {
-    "workspaces": [
-        "apps/todolist",
-        "packages/common",
-        "packages/crypto",
-        "packages/web5-agent",
-        "packages/dids",
-        "packages/credentials",
-        "packages/web5-user-agent",
-        "packages/web5-proxy-agent",
-        "packages/web5"
-    ],
-    "scripts": {
-        "clean": "npx npkill -d $(pwd) -t node_modules && npx npkill -d $(pwd) -t dist",
-        "build": "npm run build --ws"
-    },
-    "private": true,
-    "overrides": {
-      "c8": {
-        "istanbul-lib-report": {
-          "make-dir": "^4.0.0"
-        }
-      }
-    }
+  "name": "web5-sdk-js",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/todolist",
+    "packages/common",
+    "packages/crypto",
+    "packages/crypto-aws-kms",
+    "packages/dids",
+    "packages/credentials",
+    "packages/agent",
+    "packages/user-agent",
+    "packages/proxy-agent",
+    "packages/api",
+    "packages/identity-agent"
+  ],
+  "scripts": {
+    "clean": "pnpm npkill -d $(pwd)/packages -t dist && pnpm npkill -d $(pwd) -t node_modules",
+    "build": "pnpm --recursive --stream build",
+    "dwn-server": "node node_modules/@web5/dwn-server/dist/esm/src/main.js || true"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TBD54566975/web5-js.git"
+  },
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@npmcli/package-json": "5.0.0",
+    "@typescript-eslint/eslint-plugin": "6.4.0",
+    "@web5/dwn-server": "0.1.9",
+    "eslint-plugin-mocha": "10.1.0",
+    "npkill": "0.11.3"
+  }
 }

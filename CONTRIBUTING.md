@@ -26,7 +26,7 @@ As we work our way towards a beta release and beyond, we'll be creating more foc
 
 These issues are excellent canditates for contribution and we'd be thrilled to get all the help we can get! You can
 take a look at all of the Issues that match the labels above
-[here](https://github.com/TBD54566975/web5-js/issues?q=is%3Aopen+label%3A%22help+wanted%22%2C%22good+first+issue%22%2C%22documentation%22%2C%22bug%22+).
+[on the Issues tab](https://github.com/TBD54566975/web5-js/issues?q=is%3Aopen+label%3A%22help+wanted%22%2C%22good+first+issue%22%2C%22documentation%22%2C%22bug%22+).
 
 We suggest the following process when picking up one of these issues:
 
@@ -40,7 +40,7 @@ We suggest the following process when picking up one of these issues:
 
 ### Discussions
 
-Design discussions and proposals take place on our Web5 [discord](https://discord.com/channels/937858703112155166/969272658501976117) channel.
+Design discussions and proposals take place on our Web5 [Discord](https://discord.com/channels/937858703112155166/969272658501976117) channel.
 
 We advocate an asynchronous, written debate model - so write up your thoughts and invite the community to join in!
 
@@ -53,19 +53,19 @@ Build and Test cycles are run on every commit to every branch using [GitHub Acti
 | Requirement | Tested Version | Installation Instructions                                                                      |
 | ----------- | -------------- | ---------------------------------------------------------------------------------------------- |
 | Node.js     | 18.16.0        | [Introduction to Node.js](https://nodejs.dev/en/learn/)                                        |
-| NPM         | 9.6.3          | [NPM Package Manager](https://nodejs.dev/en/learn/an-introduction-to-the-npm-package-manager/) |
+| PNPM        | 8.15.3         | [PNPM Package Manager](https://pnpm.io/installation)                                           |
 
 ### TypeScript
 
 This project is written in TypeScript, a strongly typed programming language that builds on JavaScript.
 
-You may verify your `node` and `npm` installation via the terminal:
+You may verify your `node` and `pnpm` installation via the terminal:
 
 ```
 $ node --version
 v18.16.0
-$ npm --version
-9.6.3
+$ pnpm --version
+8.15.3
 ```
 
 If you do not have Node.js installed, we recommend following the
@@ -94,7 +94,7 @@ to your valuable work:
   rebase atop the upstream `main` branch. This will limit the potential for merge
   conflicts during review, and helps keep the audit trail clean. A good writeup for
   how this is done is
-  [here](https://medium.com/@slamflipstrom/a-beginners-guide-to-squashing-commits-with-git-rebase-8185cf6e62ec), and if you're
+  [this beginner's guide to squashing commits](https://medium.com/@slamflipstrom/a-beginners-guide-to-squashing-commits-with-git-rebase-8185cf6e62ec)
   having trouble - feel free to ask a member or the community for help or leave the commits as-is, and flag that you'd like
   rebasing assistance in your PR! We're here to support you.
 - Open a PR in the project to bring in the code from your feature branch.
@@ -108,11 +108,18 @@ to your valuable work:
 
 ### Running Tests
 
-- Running the `npm run test:node --ws` command from the root of the project will run all tests using node.
+> [!IMPORTANT]
+> Before running tests ensure you've completed the following steps:
+> 1. Install the [development prerequisites](#development-prerequisites).
+> 2. Follow the [these steps](https://github.com/TBD54566975/web5-js#cloning) to clone this repository and `cd` into the project directory.
+> 3. Install all project dependencies by running `pnpm install` from the root directory of the project.
+> 4. Build all workspace projects by running npm `pnpm build` from the root directory of the project.
+
+- Running the `pnpm --recursive test:node` command from the root of the project will run all tests using node.
   - This is run via CI whenever a pull request is opened, or a commit is pushed to a branch that has an open PR
-- Running the `npm run test:browser --ws` command from the root of the project will run the tests in a browser environment
+- Running the `pnpm --recursive test:browser` command from the root of the project will run the tests in a browser environment
   - Please make sure there are no failing tests before switching your PR to ready for review! We hope to have this automated via a github action very soon.
-- You can also run `npm run test:node -w=packages/DIR` or `npm run test:browser -w=packages/DIR` from the root of the project to run tests for a single package. For example, to run the tests only for the `web5` package run `npm run test:node -w=packages/web5`.
+- You can also run `pnpm --filter=PACKAGE test:node` or `pnpm --filter=PACKAGE test:browser` from the root of the project to run tests for a single package. For example, to run the tests only for the `dids` package run `pnpm --filter=dids test:node`.
 
 ### Test Coverage Expectations
 
@@ -133,6 +140,26 @@ To maintain the robustness and reliability of the codebase, we highly value test
   out for help or guidance in our Web5
   [Discord](https://discord.com/channels/937858703112155166/969272658501976117)
   channel.
+
+### Documentation Generator
+
+We are using [tbdocs](https://github.com/TBD54566975/tbdocs) to check, generate and publish our SDK API Reference docs automatically to GH Pages.
+
+To see if the docs are being generated properly without errors, and to preview the generated docs locally execute the following script:
+
+```sh
+./scripts/tbdocs-check-local.sh
+
+# to see if there are any doc errors
+open .tbdocs/docs-report.md
+
+# to serve the generated docs locally using a static server (e.g. `pnpm install -g http-server`)
+http-server .tbdocs/docs
+```
+
+The errors can be found at `./tbdocs/summary.md`
+
+_PS: You need to have docker installed on your computer._
 
 ### Project Versioning Guidelines
 
@@ -172,7 +199,7 @@ After one or more PRs have been approved and merged by project maintainers, a Gi
 version tag. The act of creating the GitHub release triggers automated publication of the package to the
 [NPM Registry](https://npmjs.com) which will be tagged as _latest_.
 
-The next time someone runs `npm install @tbd54566975/<package_name>` the newly published release will be installed.
+The next time someone runs `pnpm install @web5/<package_name>` the newly published release will be installed.
 
 #### Alpha Releases
 
@@ -198,5 +225,5 @@ the [NPM Registry](https://npmjs.com) within a few minutes.
 > **Note**
 > Alpha version will never be tagged as _latest_.
 
-To install an `alpha` tagged release use either the `npm install @tbd54566975/<package>@alpha` or
-`npm install @tbd5456975/<package>@x.y.z-alpha-YYYYMMDD-commithash` syntax.
+To install an `alpha` tagged release use either the `pnpm install @web5/<package>@alpha` or
+`pnpm install @web5/<package>@x.y.z-alpha-YYYYMMDD-commithash` syntax.

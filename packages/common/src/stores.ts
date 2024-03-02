@@ -1,4 +1,45 @@
+import type { AbstractLevel } from 'abstract-level';
+
+import { Level } from 'level';
+
 import type { KeyValueStore } from './types.js';
+
+export class LevelStore<K = string, V = any> implements KeyValueStore<K, V> {
+  private store: AbstractLevel<string | Buffer | Uint8Array, K, V>;
+
+  constructor({ db, location = 'DATASTORE' }: {
+    db?: AbstractLevel<string | Buffer | Uint8Array, K, V>;
+    location?: string;
+  } = {}) {
+    this.store = db ?? new Level<K, V>(location);
+  }
+
+  async clear(): Promise<void> {
+    await this.store.clear();
+  }
+
+  async close(): Promise<void> {
+    await this.store.close();
+  }
+
+  async delete(key: K): Promise<void> {
+    await this.store.del(key);
+  }
+
+  async get(key: K): Promise<V | undefined> {
+    try {
+      return await this.store.get(key);
+    } catch (error: any) {
+      // Don't throw when a key wasn't found.
+      if (error.notFound) return undefined;
+      throw error;
+    }
+  }
+
+  async set(key: K, value: V): Promise<void> {
+    await this.store.put(key, value);
+  }
+}
 
 /**
  * The `MemoryStore` class is an implementation of
@@ -23,7 +64,7 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
   /**
    * A private field that contains the Map used as the key-value store.
    */
-  #store: Map<K, V> = new Map();
+  private store: Map<K, V> = new Map();
 
   /**
    * Clears all entries in the key-value store.
@@ -31,15 +72,15 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves when the operation is complete.
    */
   async clear(): Promise<void> {
-    this.#store.clear();
+    this.store.clear();
   }
 
   /**
-   * This operation is not supported by `MemoryStore`
-   * and will throw an error if called.
+   * This operation is no-op for `MemoryStore`
+   * and will log a warning if called.
    */
   async close(): Promise<void> {
-    throw new Error('MemoryStore does not support the close() method.');
+    /** no-op */
   }
 
   /**
@@ -49,7 +90,7 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves to a boolean indicating whether the entry was successfully deleted.
    */
   async delete(id: K): Promise<boolean> {
-    return this.#store.delete(id);
+    return this.store.delete(id);
   }
 
   /**
@@ -59,7 +100,7 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves to the value of the entry, or `undefined` if the entry does not exist.
    */
   async get(id: K): Promise<V | undefined> {
-    return this.#store.get(id);
+    return this.store.get(id);
   }
 
   /**
@@ -69,7 +110,7 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves to a boolean indicating whether an element with the specified key exists or not.
    */
   async has(id: K): Promise<boolean> {
-    return this.#store.has(id);
+    return this.store.has(id);
   }
 
   /**
@@ -78,7 +119,7 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves to an array of all values in the store.
    */
   async list(): Promise<V[]> {
-    return Array.from(this.#store.values());
+    return Array.from(this.store.values());
   }
 
   /**
@@ -89,6 +130,6 @@ export class MemoryStore<K, V> implements KeyValueStore<K, V> {
    * @returns A Promise that resolves when the operation is complete.
    */
   async set(id: K, key: V): Promise<void> {
-    this.#store.set(id, key);
+    this.store.set(id, key);
   }
 }

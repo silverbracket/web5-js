@@ -1,0 +1,25 @@
+{
+  "$schema": "https://codesandbox.io/schemas/tasks.json",
+  "setupTasks": [
+    {
+      "name": "Installing Dependencies",
+      "command": "pnpm install"
+    }
+  ],
+  "tasks": {
+    "dev": {
+      "name": "Build Web5 SDK",
+      "command": "pnpm build",
+      "runAtStart": true,
+      "restartOn": {
+        "files": [
+          "package-lock.json"
+        ]
+      }
+    },
+    "tests": {
+      "name": "Run tests",
+      "command": "pnpm --recursive --stream test:node"
+    }
+  }
+}

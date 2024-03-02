@@ -4,15 +4,18 @@
 **/INDEX/
 **/MESSAGESTORE/
 data
+compiled
 
 **/__tests__/
 **/__TESTDATA__/
-packages/web5-user-agent/src/test-sync-api.ts
 
 # bundle metadata
 bundle-metadata.json
 
 ### Node ###
+# NPM lock file
+package-lock.json
+
 # Logs
 logs
 *.log
@@ -152,4 +155,13 @@ dist
 # SvelteKit build / generate output
 .svelte-kit
 
+# MacOS
 .DS_STORE
+
+# IntelliJ
+.idea
+
+results.xml
+
+.tbdocs
+temp

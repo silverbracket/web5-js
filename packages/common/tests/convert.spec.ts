@@ -2,6 +2,8 @@ import { expect } from 'chai';
 
 import { Convert } from '../src/convert.js';
 
+const textEncoder = new TextEncoder();
+
 describe('Convert', () =>{
   describe('from: ArrayBuffer', () => {
     it('to: Base58Btc', () => {
@@ -53,6 +55,105 @@ describe('Convert', () =>{
     });
   });
 
+  describe('from: AsyncIterable', () => {
+    let asyncIterableBytes: AsyncIterable<Uint8Array>;
+    let asyncIterableJson: AsyncIterable<any>;
+    let asyncIterableString: AsyncIterable<Uint8Array>;
+
+    // Create a generator function that yields two Uint8Array chunks.
+    async function* generateBytesData() {
+      yield new Uint8Array([1, 2, 3]);
+      yield new Uint8Array([4, 5, 6]);
+    }
+
+    // Create a generator function that yields parts of a JSON string.
+    async function* generateJsonData() {
+      yield '{"foo":';
+      yield '"bar"';
+      yield '}';
+    }
+
+    // Create a generator function that yields Uint8Array chunks of encoded string data.
+    async function* generateStringData() {
+      yield textEncoder.encode('Hello, ');
+      yield textEncoder.encode('world!');
+    }
+
+    beforeEach(() => {
+      asyncIterableBytes = generateBytesData();
+      asyncIterableJson = generateJsonData();
+      asyncIterableString = generateStringData();
+    });
+
+    it('to: ArrayBuffer', async () => {
+      const output = await Convert.asyncIterable(asyncIterableBytes).toArrayBufferAsync();
+
+      // The expected ArrayBuffer is a concatenation of the yielded Uint8Arrays
+      const expected = new Uint8Array([1, 2, 3, 4, 5, 6]).buffer;
+
+      // Compare the result with the expected ArrayBuffer
+      expect(new Uint8Array(output)).to.deep.equal(new Uint8Array(expected));
+    });
+
+    it('to: Blob', async () => {
+      const output = await Convert.asyncIterable(asyncIterableBytes).toBlobAsync();
+
+      // Check if the returned object is a Blob
+      expect(output).to.be.an.instanceOf(Blob);
+
+      // Convert Blob to ArrayBuffer to verify contents
+      const arrayBuffer = await output.arrayBuffer();
+      const result = new Uint8Array(arrayBuffer);
+
+      // The expected result is a concatenation of the yielded Uint8Arrays
+      const expected = new Uint8Array([1, 2, 3, 4, 5, 6]);
+
+      // Compare the result with the expected Uint8Array
+      expect(result).to.deep.equal(expected);
+    });
+
+    it('to: Object', async () => {
+      const output = await Convert.asyncIterable(asyncIterableJson).toObjectAsync();
+
+      // The expected result is the object formed by the concatenated JSON string
+      const expected = { foo: 'bar' };
+
+      // Compare the result with the expected object
+      expect(output).to.deep.equal(expected);
+    });
+
+    it('to: String', async () => {
+      const output = await Convert.asyncIterable(asyncIterableString).toStringAsync();
+
+      // The expected result is the concatenated string
+      const expected = 'Hello, world!';
+
+      // Compare the result with the expected string
+      expect(output).to.equal(expected);
+    });
+
+    it('to: Uint8Array', async () => {
+      const output = await Convert.asyncIterable(asyncIterableBytes).toUint8ArrayAsync();
+
+      // The expected result is a Uint8Array that concatenates all chunks
+      const expected = new Uint8Array([1, 2, 3, 4, 5, 6]);
+
+      // Compare the result with the expected Uint8Array
+      expect(output).to.deep.equal(expected);
+    });
+
+    it('throws an error if input is not AsyncIterable', async () => {
+      try {
+        // @ts-expect-error because incorrect input data type is intentionally being used to trigger error.
+        Convert.asyncIterable('unsupported');
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('must be of type AsyncIterable');
+      }
+    });
+  });
+
   describe('from: Base58Btc', () => {
     it('to: ArrayBuffer', () => {
       // Test Vector 1.
@@ -96,6 +197,14 @@ describe('Convert', () =>{
       expect(result).to.deep.equal(output);
     });
 
+    it('to: Hex', () => {
+      // Test Vector 1.
+      let input = 'eyJmb28iOiJiYXIifQ';
+      let output = '7b22666f6f223a22626172227d';
+      const result = Convert.base64Url(input).toHex();
+      expect(result).to.deep.equal(output);
+    });
+
     it('to: Object', () => {
       // Test Vector 1.
       let input = 'eyJmb28iOiJiYXIifQ';
@@ -122,6 +231,23 @@ describe('Convert', () =>{
       let output = new Uint8Array([51, 52, 53]);
 
       let result = Convert.base64Url(input).toUint8Array();
+
+      expect(result).to.deep.equal(output);
+    });
+  });
+
+  describe('from: Base64Z', () => {
+    it('to: Uint8Array', () => {
+      // Test Vector 1.
+      let input = '5umembtazeybqcd7grysfp711g1z56wzo8irzhae494hh58zguhy';
+      let output = new Uint8Array([
+        220, 214, 133, 134,  56, 186,   0,  23,
+        48,  125,  49,   1,  98, 183, 178, 145,
+        165, 125, 250, 151, 129, 234,  75, 243,
+        8,   215, 245, 206, 108, 247,  52, 248
+      ]);
+
+      let result = Convert.base32Z(input).toUint8Array();
 
       expect(result).to.deep.equal(output);
     });
@@ -176,6 +302,43 @@ describe('Convert', () =>{
       let inputT8 = 'not BufferSource type';
       // @ts-expect-error because incorrect input data type is intentionally being used to trigger error.
       expect (() => Convert.bufferSource(inputT8).toArrayBuffer()).to.throw(TypeError, 'value is not of type');
+    });
+
+    it('to: Base64Url', () => {
+      // Test Vector 1 - BufferSource is Uint8Array.
+      let inputT1 = new Uint8Array([102, 111, 111]);
+      let outputT1 = 'Zm9v';
+      let resultT1 = Convert.bufferSource(inputT1).toBase64Url();
+      expect(resultT1).to.deep.equal(outputT1);
+
+      // Test Vector 2 - BufferSource is ArrayBuffer.
+      let inputT2 = (new Uint8Array([50, 51, 52, 53])).buffer;
+      let outputT2 = 'MjM0NQ';
+      let resultT2 = Convert.bufferSource(inputT2).toBase64Url();
+      expect(resultT2).to.deep.equal(outputT2);
+
+      // Test Vector 3 - BufferSource is DataView.
+      let inputT3 = new DataView((new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 0])).buffer);
+      let outputT3 = 'AQIDBAUGBwgJAA';
+      let resultT3 = Convert.bufferSource(inputT3).toBase64Url();
+      expect(resultT3).to.deep.equal(outputT3);
+
+      // Test Vector 4 - BufferSource is an unsigned, 16-bit Typed Array.
+      let inputT4 = new Uint16Array([299, 298, 297]);
+      let outputT4 = 'KwEqASkB';
+      let resultT4 = Convert.bufferSource(inputT4).toBase64Url();
+      expect(resultT4).to.deep.equal(outputT4);
+
+      // Test Vector 5 - BufferSource is a signed, 32-bit Typed Array.
+      let inputT5 = new Int32Array([1111, 1000, 2000]);
+      let outputT5 = 'VwQAAOgDAADQBwAA';
+      let resultT5 = Convert.bufferSource(inputT5).toBase64Url();
+      expect(resultT5).to.deep.equal(outputT5);
+
+      // Test Vector 6 - BufferSource is Uint8Array.
+      let inputT6 = 'not BufferSource type';
+      // @ts-expect-error because incorrect input data type is intentionally being used to trigger error.
+      expect (() => Convert.bufferSource(inputT6).toBase64Url()).to.throw(TypeError, 'value is not of type');
     });
 
     it('to: Uint8Array', () => {
@@ -354,6 +517,21 @@ describe('Convert', () =>{
       expect(result).to.deep.equal(output);
     });
 
+    it('to: Base32Z', () => {
+      // Test Vector 1.
+      let input = new Uint8Array([
+        220, 214, 133, 134,  56, 186,   0,  23,
+        48,  125,  49,   1,  98, 183, 178, 145,
+        165, 125, 250, 151, 129, 234,  75, 243,
+        8,   215, 245, 206, 108, 247,  52, 248
+      ]);
+      let output = '5umembtazeybqcd7grysfp711g1z56wzo8irzhae494hh58zguhy';
+
+      let result = Convert.uint8Array(input).toBase32Z();
+
+      expect(result).to.deep.equal(output);
+    });
+
     it('to: Base58Btc', () => {
       // Test Vector 1.
       let input = new Uint8Array([51, 52, 53]);
@@ -411,12 +589,36 @@ describe('Convert', () =>{
       expect(() => unsupported.toArrayBuffer()).to.throw(TypeError, 'not supported');
     });
 
+    it('toArrayBufferAsync() throw an error', async () => {
+      try {
+        await unsupported.toArrayBufferAsync();
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('not supported');
+      }
+    });
+
+    it('toBase32Z() throw an error', () => {
+      expect(() => unsupported.toBase32Z()).to.throw(TypeError, 'not supported');
+    });
+
     it('toBase58Btc() throw an error', () => {
       expect(() => unsupported.toBase58Btc()).to.throw(TypeError, 'not supported');
     });
 
     it('toBase64Url() throw an error', () => {
       expect(() => unsupported.toBase64Url()).to.throw(TypeError, 'not supported');
+    });
+
+    it('toBlobAsync() throw an error', async () => {
+      try {
+        await unsupported.toBlobAsync();
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('not supported');
+      }
     });
 
     it('toHex() throw an error', () => {
@@ -431,12 +633,42 @@ describe('Convert', () =>{
       expect(() => unsupported.toObject()).to.throw(TypeError, 'not supported');
     });
 
+    it('toObjectAsync() throw an error', async () => {
+      try {
+        await unsupported.toObjectAsync();
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('not supported');
+      }
+    });
+
     it('toString() throw an error', () => {
       expect(() => unsupported.toString()).to.throw(TypeError, 'not supported');
     });
 
+    it('toStringAsync() throw an error', async () => {
+      try {
+        await unsupported.toStringAsync();
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('not supported');
+      }
+    });
+
     it('toUint8Array() throw an error', () => {
       expect(() => unsupported.toUint8Array()).to.throw(TypeError, 'not supported');
+    });
+
+    it('toUint8ArrayAsync() throw an error', async () => {
+      try {
+        await unsupported.toUint8ArrayAsync();
+        expect.fail('Should have thrown an error for incorrect type');
+      } catch (error: any) {
+        expect(error).to.be.instanceOf(TypeError);
+        expect(error.message).to.include('not supported');
+      }
     });
   });
 });

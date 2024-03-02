@@ -19,71 +19,55 @@ jobs:
     name: NPM Publish
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        package:
-          [
-            "common",
-            "crypto",
-            "dids",
-            "web5",
-            "web5-agent",
-            "web5-proxy-agent",
-            "web5-user-agent",
-          ]
+    env:
+      # Packages not listed here will be excluded from publishing
+      PACKAGES: "agent api common credentials crypto crypto-aws-kms dids identity-agent proxy-agent user-agent"
 
     steps:
       - name: Checkout source
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 #v4.1.1
+
+      - uses: pnpm/action-setup@a3252b78c470c02df07e9d59298aecedc3ccdd6d #v3.0.0
+        with:
+          version: 8
 
       - name: Set up Node.js
-        uses: actions/setup-node@64ed1c7eab4cce3362f8c340dee64e5eaeef8f7c # v3.6.0
+        uses: actions/setup-node@5ef044f9d09786428e6e895be6be17937becee3a #v4.0.0
         with:
           node-version: 18
           registry-url: https://registry.npmjs.org/
+          cache: 'pnpm'
 
-      - name: Install latest npm
-        run: npm install -g npm@latest
-
-      # Note - this is not required but it gives a clean failure prior to attempting a release if the GH workflow runner is not authenticated with NPMjs.com
+      # Note - this is not required but it gives a clean failure prior to attempting a release if
+      # the GH workflow runner is not authenticated with NPMjs.com
       - name: Verify NPM token is authenticated with NPMjs.com
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
-        run: npm whoami
-
-      - name: Fetch the version in the GitHub repo's package.json file
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
-        run: |
-          cd packages/${{ matrix.package }}
-          REPO_VERSION=$(node -p "require('./package.json').version")
-          echo "REPO_VERSION=$REPO_VERSION" >> $GITHUB_ENV
-          echo "Repo Version: $REPO_VERSION"
-        shell: bash
-
-      - name: Generate the alpha version string
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
-        run: |
-          cd packages/${{ matrix.package }}
-          SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)
-          YYYYMMDD=$(date +'%Y%m%d')
-          ALPHA_VERSION="${{ env.REPO_VERSION }}-alpha-$YYYYMMDD-$SHORT_COMMIT_SHA"
-          echo "ALPHA_VERSION=$ALPHA_VERSION" >> $GITHUB_ENV
-          echo "Alpha Version: $ALPHA_VERSION"
-        shell: bash
+        run: pnpm whoami
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
-      - name: Build all workspace packages
-        run: npm run build
-
-      - name: Publish @tbd54566975/${{ matrix.package }}@${{ env.ALPHA_VERSION }}
+      - name: Generate alpha prerelease and bump package.json @web5/* versions
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
         run: |
-          cd packages/${{ matrix.package }}
-          npm version ${{ env.ALPHA_VERSION }} --no-git-tag-version
-          npm publish --tag alpha --no-git-tag-version --access public --provenance
+          SHORT_COMMIT_SHA=$(git rev-parse --short HEAD)
+          YYYYMMDD=$(date +'%Y%m%d')
+          ALPHA_PRERELEASE="alpha-$YYYYMMDD-$SHORT_COMMIT_SHA"
+          node ./scripts/bump-workspace.mjs --prerelease=$ALPHA_PRERELEASE
+        shell: bash
+
+      - name: Build all workspace packages
+        run: pnpm --recursive --stream build
+
+      - name: Publish selected @web5/* packages
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+        run: |
+          for package in $PACKAGES; do
+            cd packages/$package
+            pnpm publish --tag alpha --no-git-tag-version --access public --provenance
+            cd ../..
+          done
         shell: bash
